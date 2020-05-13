@@ -1,93 +1,63 @@
 import React from 'react';
+import styled from 'styled-components'
 import dogs from "../dogsdata";
-import {Button} from "reactstrap";
-import FavoriteActions from "../components/FavoriteActions";
-import Dog from "../components/Dog";
-import axios from "axios";
-
-
-const apiHost = "MOCK API URL";
+import { Dog } from "../components";
+import { connect } from 'react-redux';
+import { fetchData } from '../redux/actions';
 
 class Homepage extends React.Component {
-    constructor(props){
-        super(props);
 
-        this.state = {
-            favorites: [],
-            loadingFavorites: false
-        }
-    }
     componentDidMount() {
-        // localstoragedan getirme
-/*        this.setState({
-            favorites: window.localStorage.getItem("favorites") ? JSON.parse(window.localStorage.getItem("favorites")): []
-        })*/
-
-        this.setState({
-            loadingFavorites: true
-        }, () => {
-            axios.get(`${apiHost}/favorites`).then((result) => {
-                this.setState({
-                    favorites: result.data,
-                    loadingFavorites: false
-                })
-            }).catch((err) => {
-                console.log("Axios err", err);
-                this.setState(({
-                    loadingFavorites: false
-                }))
-            })
-        })
+        this.props.fetchData()
     }
 
-    toggle = (dogId)=>{
-        const foundDog = this.state.favorites.find((favorite) => favorite.dogId === dogId);
-        if(foundDog){
-            axios.delete(`${apiHost}/favorites/${foundDog.id}`).then((result) => {
-                this.setState(({
-                    favorites: this.state.favorites.filter((dog) => dog.dogId !== dogId)
-                }))
-            }).catch((err) => {
-                console.log(err);
-            });
-        }else{
-            // window.localStorage.setItem("favorites", JSON.stringify(this.state.favorites));
-            axios.post(`${apiHost}/favorites`, {
-                dogId
-            }).then((result) => {
-                const eklenenFavori = result.data; // {id: 1, dogId: benim yolladigim dog id, createdat: date}
-                this.setState({
-                    favorites: [...this.state.favorites, eklenenFavori]
-                })
-            }).catch((err) => {
-                console.log(err);
-            })
-        }
-    }
-
-    getStatus= (dogId) =>{
-        const foundDog = this.state.favorites.find((favorite) => favorite.dogId === dogId);
-        return foundDog;
-    }
-
-    render(){
-        if(this.state.loadingFavorites){
+    render() {
+        const { loadingFavorites, errorMessage } = this.props
+        if (loadingFavorites) {
             return <div>
-                <h1>Sayfa Yukleniyor.....</h1>
+                <h1>Sayfa Yukleniyor...</h1>
+            </div>
+        }
+        if (errorMessage) {
+            return <div>
+                <h1>{errorMessage}</h1>
             </div>
         }
         return (
             <div>
-                <ul>
+                <StyledList>
                     {
                         dogs.map((dog) => {
-                            return <Dog toggle={this.toggle} id={dog.id} getStatus={this.getStatus} {...dog}/>
+                            return <Dog
+                                key={dog.id}
+                                id={dog.id}
+                                {...dog} />
                         })
                     }
-                </ul>
+                </StyledList>
             </div>
         );
     }
 }
 
-export default Homepage;
+const StyledList = styled.ul`
+  display: flex;
+  flex-wrap: wrap;
+  padding-inline-start: 20px;
+`
+
+const mapDispatchToProps = {
+    fetchData
+}
+
+const mapStateToProps = state => {
+    const { favorites, loadingFavorites, disableButtonById, errorMessage } = state.dogsReducer;
+    return {
+        favorites,
+        loadingFavorites,
+        disableButtonById,
+        errorMessage
+    }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Homepage);
